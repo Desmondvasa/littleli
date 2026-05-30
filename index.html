@@ -27,8 +27,6 @@
     </div>
 
     <script>
-        const API_URL = "/api/parse";
-
         async function playMusic() {
             const urlInput = document.getElementById('yt-url').value;
             const statusText = document.getElementById('status');
@@ -41,39 +39,64 @@
                 return;
             }
 
-            statusText.innerText = "⏳ 呼叫解析引擎中，請稍候...";
+            statusText.innerText = "⏳ 呼叫分散式節點中，請稍候...";
             statusText.style.color = "#555";
             songTitle.innerText = "";
             audioPlayer.style.display = "none";
             audioPlayer.pause();
 
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json' 
-                    },
-                    body: JSON.stringify({ 
-                        url: urlInput
-                    })
-                });
+            const videoIdMatch = urlInput.match(/(?:youtu\.be\/|v=|\/v\/|embed\/|\?v=|\&v=)([0-9A-Za-z_-]{11})/);
+            
+            if (!videoIdMatch) {
+                statusText.innerText = "❌ 網址格式錯誤，找不到影片 ID";
+                statusText.style.color = "red";
+                return;
+            }
 
-                const data = await response.json();
+            const videoId = videoIdMatch[1];
+            
+            const instances = [
+                "https://vid.puffyan.us",
+                "https://invidious.nerdvpn.de",
+                "https://inv.tux.pizza",
+                "https://invidious.jing.rocks"
+            ];
 
-                if (data.success) {
-                    statusText.innerText = "✅ 解析成功！";
-                    statusText.style.color = "green";
-                    songTitle.innerText = data.title; 
+            let audioUrl = null;
+            let foundTitle = "🎶 音樂準備就緒";
+
+            for (const instance of instances) {
+                try {
+                    const response = await fetch(`${instance}/api/v1/videos/${videoId}`);
+                    if (!response.ok) continue;
                     
-                    audioPlayer.src = data.audio_url;
-                    audioPlayer.style.display = "block";
-                    audioPlayer.play();
-                } else {
-                    statusText.innerText = "❌ 解析失敗：" + (data.error || "未知錯誤");
-                    statusText.style.color = "red";
+                    const data = await response.json();
+                    
+                    if (data.title) {
+                        foundTitle = data.title;
+                    }
+
+                    if (data.adaptiveFormats) {
+                        const audioFormats = data.adaptiveFormats.filter(f => f.type && f.type.startsWith('audio'));
+                        if (audioFormats.length > 0) {
+                            audioUrl = audioFormats[0].url;
+                            break;
+                        }
+                    }
+                } catch (error) {
+                    continue;
                 }
-            } catch (error) {
-                statusText.innerText = "❌ 發生錯誤：" + error.message;
+            }
+
+            if (audioUrl) {
+                statusText.innerText = "✅ 解析成功！";
+                statusText.style.color = "green";
+                songTitle.innerText = foundTitle; 
+                audioPlayer.src = audioUrl;
+                audioPlayer.style.display = "block";
+                audioPlayer.play();
+            } else {
+                statusText.innerText = "❌ 解析失敗：所有節點皆無法取得音樂";
                 statusText.style.color = "red";
             }
         }
