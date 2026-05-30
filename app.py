@@ -19,13 +19,12 @@ def parse_video():
         
     try:
         ydl_opts = {
-            'format': 'bestaudio/best',
+            'format': 'ba/b',
             'quiet': True,
             'no_warnings': True,
             'cookiefile': 'cookies.txt',
             'noplaylist': True,
             'extractor_args': {
-                'youtube': ['client=ANDROID'],
                 'youtubetab': ['skip=authcheck']
             }
         }
