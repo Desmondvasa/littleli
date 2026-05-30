@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LittleLi 音樂播放器</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; box-sizing: border-box; }
+        h1 { color: #e62117; font-size: 24px; margin-bottom: 20px;}
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        button { background-color: #e62117; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; font-weight: bold; }
+        button:active { background-color: #cc0000; }
+        #status { margin-top: 15px; color: #555; font-size: 14px; font-weight: bold;}
+        #song-title { margin-top: 15px; font-weight: bold; color: #333; font-size: 18px; }
+        audio { width: 100%; margin-top: 20px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 LittleLi 音樂播放器</h1>
+        <input type="text" id="yt-url" placeholder="請在此貼上 YouTube 網址...">
+        <button onclick="playMusic()">解析並播放</button>
+        <div id="status"></div>
+        <div id="song-title"></div>
+        <audio id="audio-player" controls></audio>
+    </div>
+
+    <script>
+        const API_URL = "https://api.cobalt.tools/";
+
+        async function playMusic() {
+            const urlInput = document.getElementById('yt-url').value;
+            const statusText = document.getElementById('status');
+            const songTitle = document.getElementById('song-title');
+            const audioPlayer = document.getElementById('audio-player');
+
+            if (!urlInput) {
+                statusText.innerText = "⚠️ 請先貼上 YouTube 網址喔！";
+                statusText.style.color = "red";
+                return;
+            }
+
+            statusText.innerText = "⏳ 呼叫解析引擎中，請稍候...";
+            statusText.style.color = "#555";
+            songTitle.innerText = "";
+            audioPlayer.style.display = "none";
+            audioPlayer.pause();
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify({ 
+                        url: urlInput,
+                        downloadMode: "audio",
+                        isAudioOnly: true,
+                        aFormat: "mp3"
+                    })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error?.code || "伺服器拒絕連線");
+                }
+
+                const data = await response.json();
+
+                if (data.url) {
+                    statusText.innerText = "✅ 解析成功！";
+                    statusText.style.color = "green";
+                    songTitle.innerText = "🎶 音樂準備就緒"; 
+                    
+                    audioPlayer.src = data.url;
+                    audioPlayer.style.display = "block";
+                    audioPlayer.play();
+                } else {
+                    statusText.innerText = "❌ 解析失敗：無法取得音樂網址";
+                    statusText.style.color = "red";
+                }
+            } catch (error) {
+                statusText.innerText = "❌ 發生錯誤：" + error.message;
+                statusText.style.color = "red";
+            }
+        }
+    </script>
+</body>
+</html>
