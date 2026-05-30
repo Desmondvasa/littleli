@@ -5,12 +5,10 @@ import yt_dlp
 app = Flask(__name__)
 CORS(app)
 
-# 派發 App 介面
 @app.route('/')
 def home():
     return send_file('index.html')
 
-# 解析音樂核心
 @app.route('/api/parse', methods=['POST'])
 def parse_video():
     data = request.json
@@ -24,7 +22,7 @@ def parse_video():
             'format': 'bestaudio/best',
             'quiet': True,
             'no_warnings': True,
-            'cookiefile': 'cookies.txt',  # 🔑 直接拿出最強的實體身分證！
+            'cookiefile': 'cookies.txt',
             'extractor_args': {'youtube': ['client=ANDROID']}
         }
         
@@ -33,7 +31,7 @@ def parse_video():
             
             return jsonify({
                 'success': True,
-                'title': info.get('title', '🎶 音樂解析成功'),
+                'title': info.get('title', '音樂解析成功'),
                 'audio_url': info['url']
             })
     except Exception as e:
