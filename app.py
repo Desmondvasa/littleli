@@ -23,7 +23,11 @@ def parse_video():
             'quiet': True,
             'no_warnings': True,
             'cookiefile': 'cookies.txt',
-            'extractor_args': {'youtube': ['client=ANDROID']}
+            'noplaylist': True,
+            'extractor_args': {
+                'youtube': ['client=ANDROID'],
+                'youtubetab': ['skip=authcheck']
+            }
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
