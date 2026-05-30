@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import yt_dlp
+import urllib.request
+import json
 
 app = Flask(__name__)
-CORS(app)  # 允許跨網域存取，這樣你的 APK 才連得進來
+# 開啟 CORS，允許你的網頁/APK 連線進來
+CORS(app)
 
 @app.route('/api/parse', methods=['POST'])
 def parse_video():
@@ -13,31 +15,37 @@ def parse_video():
     if not youtube_url:
         return jsonify({'error': '請提供網址'}), 400
         
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'quiet': True,
-        'no_warnings': True,
-        # 加入這行偽裝參數，騙過 YouTube 的機器人檢查
-        'extractor_args': {
-            'youtube': ['client=ANDROID']
-        }
-    }
-    
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(youtube_url, download=False)
-            # 取得 YouTube 的直連音訊串流網址
-            audio_url = info.get('url')
-            title = info.get('title', '未知歌曲')
-            
+        # 大腦代替手機，以伺服器的身分向 Cobalt 請求
+        req = urllib.request.Request(
+            'https://api.cobalt.tools/api/json',
+            data=json.dumps({
+                "url": youtube_url,
+                "isAudioOnly": True
+            }).encode('utf-8'),
+            headers={
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+            }
+        )
+        
+        response = urllib.request.urlopen(req)
+        cobalt_data = json.loads(response.read().decode('utf-8'))
+        
+        if 'url' in cobalt_data:
             return jsonify({
                 'success': True,
-                'title': title,
-                'audio_url': audio_url
+                'title': '🎶 雲端解析完畢，音樂準備就緒！',
+                'audio_url': cobalt_data['url']
             })
+        else:
+            return jsonify({'success': False, 'error': cobalt_data.get('text', '未知的解析錯誤')}), 500
+            
+    except urllib.error.HTTPError as e:
+        return jsonify({'success': False, 'error': f'伺服器拒絕連線 (錯誤碼: {e.code})'}), 500
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # 在本地測試時啟動，部署到雲端時雲端平台會自動指定 port
     app.run(host='0.0.0.0', port=5000)
