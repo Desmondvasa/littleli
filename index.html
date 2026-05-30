@@ -39,62 +39,35 @@
                 return;
             }
 
-            statusText.innerText = "⏳ 呼叫 Piped 隱形節點中，請稍候...";
+            statusText.innerText = "⏳ 多節點代理層解析中，請稍候...";
             statusText.style.color = "#555";
             songTitle.innerText = "";
             audioPlayer.style.display = "none";
             audioPlayer.pause();
 
-            const videoIdMatch = urlInput.match(/(?:youtu\.be\/|v=|\/v\/|embed\/|\?v=|\&v=)([0-9A-Za-z_-]{11})/);
-            
-            if (!videoIdMatch) {
-                statusText.innerText = "❌ 網址格式錯誤，找不到影片 ID";
-                statusText.style.color = "red";
-                return;
-            }
+            try {
+                const response = await fetch("/api/parse", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: urlInput })
+                });
 
-            const videoId = videoIdMatch[1];
-            
-            const instances = [
-                "https://pipedapi.kavin.rocks",
-                "https://pipedapi.smnz.de",
-                "https://api.piped.projectsegfau.lt",
-                "https://piped-api.lunar.icu"
-            ];
+                const data = await response.json();
 
-            let audioUrl = null;
-            let foundTitle = "🎶 音樂準備就緒";
-
-            for (const instance of instances) {
-                try {
-                    const response = await fetch(`${instance}/streams/${videoId}`);
-                    if (!response.ok) continue;
+                if (data.success) {
+                    statusText.innerText = "✅ 解析成功！";
+                    statusText.style.color = "green";
+                    songTitle.innerText = data.title; 
                     
-                    const data = await response.json();
-                    
-                    if (data.title) {
-                        foundTitle = data.title;
-                    }
-
-                    if (data.audioStreams && data.audioStreams.length > 0) {
-                        const bestAudio = data.audioStreams.find(s => s.mimeType && s.mimeType.includes('mp4a')) || data.audioStreams[0];
-                        audioUrl = bestAudio.url;
-                        break;
-                    }
-                } catch (error) {
-                    continue;
+                    audioPlayer.src = data.audio_url;
+                    audioPlayer.style.display = "block";
+                    audioPlayer.play();
+                } else {
+                    statusText.innerText = "❌ 解析失敗：" + (data.error || "未知錯誤");
+                    statusText.style.color = "red";
                 }
-            }
-
-            if (audioUrl) {
-                statusText.innerText = "✅ 解析成功！";
-                statusText.style.color = "green";
-                songTitle.innerText = foundTitle; 
-                audioPlayer.src = audioUrl;
-                audioPlayer.style.display = "block";
-                audioPlayer.play();
-            } else {
-                statusText.innerText = "❌ 解析失敗：所有備用節點皆忙碌中，請稍後再試";
+            } catch (error) {
+                statusText.innerText = "❌ 無法連線到大腦：" + error.message;
                 statusText.style.color = "red";
             }
         }
