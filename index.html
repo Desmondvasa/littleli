@@ -27,7 +27,7 @@
     </div>
 
     <script>
-        const API_URL = "https://api.cobalt.tools/";
+        const API_URL = "/api/parse";
 
         async function playMusic() {
             const urlInput = document.getElementById('yt-url').value;
@@ -51,34 +51,25 @@
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 
-                        'Accept': 'application/json',
                         'Content-Type': 'application/json' 
                     },
                     body: JSON.stringify({ 
-                        url: urlInput,
-                        downloadMode: "audio",
-                        isAudioOnly: true,
-                        aFormat: "mp3"
+                        url: urlInput
                     })
                 });
 
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error?.code || "伺服器拒絕連線");
-                }
-
                 const data = await response.json();
 
-                if (data.url) {
+                if (data.success) {
                     statusText.innerText = "✅ 解析成功！";
                     statusText.style.color = "green";
-                    songTitle.innerText = "🎶 音樂準備就緒"; 
+                    songTitle.innerText = data.title; 
                     
-                    audioPlayer.src = data.url;
+                    audioPlayer.src = data.audio_url;
                     audioPlayer.style.display = "block";
                     audioPlayer.play();
                 } else {
-                    statusText.innerText = "❌ 解析失敗：無法取得音樂網址";
+                    statusText.innerText = "❌ 解析失敗：" + (data.error || "未知錯誤");
                     statusText.style.color = "red";
                 }
             } catch (error) {
