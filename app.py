@@ -17,6 +17,10 @@ def parse_video():
         'format': 'bestaudio/best',
         'quiet': True,
         'no_warnings': True,
+        # 加入這行偽裝參數，騙過 YouTube 的機器人檢查
+        'extractor_args': {
+            'youtube': ['client=ANDROID']
+        }
     }
     
     try:
